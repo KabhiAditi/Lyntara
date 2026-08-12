@@ -1,0 +1,17 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+
+# Existing engine dependencies (imported by Engine/sql.py and Engine/classifier.py)
+python-dotenv>=1.0
+qdrant-client>=1.9
+sentence-transformers>=3.0
+sqlglot>=25.0
+google-genai>=0.5
+groq>=0.10
+numpy>=1.26
+scipy>=1.11
+
+# PostgreSQL connectivity checks only (no execution in this phase)
+psycopg[binary]>=3.2
+

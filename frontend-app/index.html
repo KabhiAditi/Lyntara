@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0d0f12"/>
+<title>QueryNL2SQL</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 1 — DATABASE CONNECTION
+════════════════════════════════════════ -->
+<div id="s-connect" class="screen active">
+  <div class="brand"><span class="brand-dot"></span> QueryNL2SQL · v1.0</div>
+
+  <div class="conn-card fade-in">
+    <div class="conn-title">Connect your database</div>
+    <div class="conn-sub">Select a database type and enter your credentials to begin.</div>
+
+    <div class="db-grid">
+      <button class="db-btn active" onclick="selectDB(this,'postgresql','5432')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="9" rx="10" ry="4" stroke="#19c490" stroke-width="1.5"/>
+          <path d="M6 9v10c0 2.2 4.5 4 10 4s10-1.8 10-4V9" stroke="#19c490" stroke-width="1.5"/>
+          <path d="M6 14c0 2.2 4.5 4 10 4s10-1.8 10-4" stroke="#19c490" stroke-width="1.5"/>
+        </svg>
+        PostgreSQL
+      </button>
+      <button class="db-btn" onclick="selectDB(this,'mysql','3306')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="9" rx="10" ry="4" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M6 9v10c0 2.2 4.5 4 10 4s10-1.8 10-4V9" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M6 14c0 2.2 4.5 4 10 4s10-1.8 10-4" stroke="#8b909e" stroke-width="1.5"/>
+        </svg>
+        MySQL
+      </button>
+      <button class="db-btn" onclick="selectDB(this,'sqlite','')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <rect x="8" y="6" width="16" height="20" rx="2" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M12 12h8M12 16h8M12 20h5" stroke="#8b909e" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        SQLite
+      </button>
+      <button class="db-btn" onclick="selectDB(this,'mssql','1433')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <rect x="6" y="7" width="20" height="18" rx="2" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M6 13h20M12 13v12" stroke="#8b909e" stroke-width="1.5"/>
+        </svg>
+        MSSQL
+      </button>
+    </div>
+
+    <div class="field" id="field-host">
+      <label>Host / server</label>
+      <input type="text" id="inp-host" value="localhost" placeholder="e.g. 127.0.0.1 or db.myserver.com"/>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Database name</label>
+        <input type="text" id="inp-dbname" value="ecommerce_db" placeholder="my_database"/>
+      </div>
+      <div class="field" id="field-port">
+        <label>Port</label>
+        <input type="text" id="inp-port" value="5432" placeholder="5432"/>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="inp-user" value="root" placeholder="db_user"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="inp-pass" value="password123" placeholder="••••••••"/>
+      </div>
+    </div>
+
+    <div class="test-row">
+      <button class="test-btn" onclick="testConn()">Test connection</button>
+      <div class="conn-status" id="conn-status">
+        <span class="status-dot pulse"></span>
+        <span id="conn-msg">Connected successfully</span>
+      </div>
+    </div>
+
+    <button class="connect-btn" onclick="goLoading()">Connect &amp; extract schema →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 2 — LOADING / PIPELINE INIT
+════════════════════════════════════════ -->
+<div id="s-loading" class="screen">
+  <div class="loading-title">Initialising pipeline</div>
+  <div class="loading-sub" id="loading-sub">Connecting to ecommerce_db…</div>
+  <div class="pipeline-progress" style="margin-top:1.5rem" id="pp-steps">
+    <div class="pp-step" id="pp1">
+      <div class="spinner" id="sp1"></div>
+      <span>Connecting to database</span>
+    </div>
+    <div class="pp-step" id="pp2">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Extracting schema</span>
+    </div>
+    <div class="pp-step" id="pp3">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Generating context</span>
+    </div>
+    <div class="pp-step" id="pp4">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Upserting embeddings</span>
+    </div>
+    <div class="pp-step" id="pp5">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Pipeline ready</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 3 — MAIN APP
+════════════════════════════════════════ -->
+<div id="s-app" class="screen">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">Query<span class="tl">NL2SQL</span></div>
+    <div class="nav-pills">
+      <button class="nav-pill active" onclick="switchTab('query', this)">Query workspace</button>
+      <button class="nav-pill" onclick="switchTab('schema', this)">Schema explorer</button>
+    </div>
+    <div class="topbar-right">
+      <div class="db-badge"><span class="dot"></span><span id="topbar-db">ecommerce_db · PostgreSQL</span></div>
+      <button class="disc-btn" onclick="resetIndex()" title="Delete Qdrant collections so you can re-index">Reset Index</button>
+      <button class="disc-btn" onclick="disconnect()">Disconnect</button>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="side-section">
+        <div class="side-label">Pipeline status</div>
+        <div class="pipe-list">
+          <div class="pipe-li done"><span class="pip-dot"></span>Schema extracted</div>
+          <div class="pipe-li done"><span class="pip-dot"></span>Embeddings built</div>
+          <div class="pipe-li done"><span class="pip-dot"></span>Query classified</div>
+          <div class="pipe-li done"><span class="pip-dot"></span>Tables matched</div>
+          <div class="pipe-li now"><span class="pip-dot"></span>SQL generated</div>
+        </div>
+      </div>
+      <div class="side-section" style="flex:1">
+        <div class="side-label">Query history</div>
+        <div class="hist-list" id="hist-list">
+          <div class="hist-li active" onclick="loadHistory(this,0)">
+            <span class="htag srd">SRD</span>Welcome to QueryNL2SQL!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div style="display:flex;flex-direction:column;overflow:hidden;flex:1">
+
+      <!-- QUERY TAB -->
+      <div class="tab-panel active" id="tab-query">
+        <div class="pipe-bar">
+          <div class="pb-step done"><span class="pb-dot"></span>Extracted</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step done"><span class="pb-dot"></span>Embedded</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step done"><span class="pb-dot"></span>Classified</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step done"><span class="pb-dot"></span>Tables matched</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step now"><span class="pb-dot"></span>SQL generated</div>
+        </div>
+
+        <div class="content" id="query-content">
+
+          <!-- NL QUERY -->
+          <div class="fade-in">
+            <div class="sec-label-sm">Natural language query</div>
+            <div class="query-bubble">
+              <div class="query-text" id="q-text">What was the total revenue for last month?</div>
+              <div class="chip-row">
+                <div class="chip srd" id="q-type-chip">SRD — single-round query</div>
+                <div class="chip note" id="q-note">Standalone · no prior context needed</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLES MATCHED -->
+          <div class="fade-in-2">
+            <div class="sec-label-sm">Relevant tables &amp; columns matched</div>
+            <div class="tables-wrap" id="tables-matched">
+              <div class="tbl-chip">
+                <div class="tbl-name">orders</div>
+                <div class="tbl-cols">order_id, created_at, total_amount, status, region</div>
+              </div>
+              <div class="tbl-chip">
+                <div class="tbl-name">payments</div>
+                <div class="tbl-cols">payment_id, order_id, payment_date, amount, status</div>
+              </div>
+              <div class="tbl-chip">
+                <div class="tbl-name">customers</div>
+                <div class="tbl-cols">customer_id, name, email</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GENERATED SQL -->
+          <div class="fade-in-3">
+            <div class="sec-label-sm">Generated SQL</div>
+            <div class="sql-wrap">
+              <div class="sql-actions">
+                <button class="copy-btn" onclick="executeSQL()">Execute</button>
+                <button class="copy-btn" onclick="copySQL()">copy</button>
+              </div>
+              <div class="sql-box">
+                <pre id="sql-display"><span class="kw">SELECT</span>
+  <span class="kw">SUM</span>(p.amount) <span class="kw">AS</span> total_revenue
+<span class="kw">FROM</span>   <span class="tname">orders</span> o
+<span class="kw">JOIN</span>   <span class="tname">payments</span> p <span class="kw">ON</span> o.order_id = p.order_id
+<span class="kw">WHERE</span>
+  p.status       = <span class="val">'completed'</span>
+  <span class="kw">AND</span> p.payment_date &gt;= <span class="val">DATE_TRUNC</span>(<span class="val">'month'</span>, CURRENT_DATE - <span class="val">INTERVAL</span> <span class="val">'1 month'</span>)
+  <span class="kw">AND</span> p.payment_date &lt;  <span class="val">DATE_TRUNC</span>(<span class="val">'month'</span>, CURRENT_DATE);</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- RESULTS -->
+          <div class="fade-in-4">
+            <div class="sec-label-sm">Query results</div>
+            <div class="res-wrap">
+              <table class="res-table" id="res-table">
+                <thead>
+                  <tr>
+                    <th>total_revenue</th>
+                    <th>currency</th>
+                    <th>period</th>
+                    <th>status</th>
+                  </tr>
+                </thead>
+                <tbody id="res-body">
+                  <tr>
+                    <td>₹ 4,82,310.00</td>
+                    <td>INR</td>
+                    <td>March 2026</td>
+                    <td class="ok">completed</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /content -->
+
+        <!-- INPUT BAR -->
+        <div class="input-bar">
+          <div class="nl-wrap">
+            <textarea class="nl-input" id="nl-input" rows="1"
+              placeholder="Ask a question in plain English… e.g. 'Show me total orders per customer'"
+              onkeydown="handleKey(event)"></textarea>
+          </div>
+          <button class="run-btn" onclick="runQuery()">Run query ↵</button>
+        </div>
+      </div>
+
+      <!-- SCHEMA TAB -->
+      <div class="tab-panel" id="tab-schema">
+        <div class="schema-content">
+          <div class="schema-header">
+            <div class="schema-title">Schema explorer</div>
+            <div class="schema-meta" id="schema-meta">ecommerce_db · PostgreSQL · 12 tables</div>
+          </div>
+          <div class="schema-grid" id="schema-grid">
+            <!-- Schema cards are dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right panel -->
+  </div><!-- /app-body -->
+</div><!-- /s-app -->
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

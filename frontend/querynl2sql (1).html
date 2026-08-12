@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0d0f12"/>
+<title>QueryNL2SQL</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #0d0f12;
+    --surface:  #13161b;
+    --surface2: #1a1e26;
+    --border:   #252930;
+    --border2:  #2f343e;
+    --teal:     #19c490;
+    --teal-dim: #0f7a59;
+    --teal-bg:  #0c2820;
+    --purple:   #9b87f5;
+    --purple-bg:#1a1630;
+    --text:     #e8eaf0;
+    --text2:    #8b909e;
+    --text3:    #555b6a;
+    --amber:    #f0c060;
+    --amber-bg: #221c0a;
+    --red:      #f06060;
+    --red-bg:   #200f0f;
+    --mono:     'DM Mono', monospace;
+    --sans:     'Instrument Sans', sans-serif;
+    --radius:   10px;
+    --radius-sm:6px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  html { scroll-behavior: smooth; }
+  button { cursor: pointer; font-family: var(--sans); }
+  input, select, textarea { font-family: var(--mono); }
+  :focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+  button:focus:not(:focus-visible), input:focus:not(:focus-visible), textarea:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Themed scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: var(--border2) var(--surface2); }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: var(--surface2); border-radius: 4px; }
+  *::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  *::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .fade-in, .fade-in-2, .fade-in-3, .fade-in-4, .fade-in-5 { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .conn-card { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .tbl-chip:hover, .schema-card:hover { transform: none; }
+  }
+
+  /* ───── SCREENS ───── */
+  .screen { display: none; height: 100vh; }
+  .screen.active { display: flex; }
+
+  /* ══════════════════════════════════════
+     SCREEN 1 — DB CONNECT
+  ══════════════════════════════════════ */
+  #s-connect {
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2rem;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  #s-connect::before {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(25,196,144,0.06) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -60%);
+    pointer-events: none;
+  }
+  #s-connect::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 100% 0%, rgba(155,135,245,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 0% 100%, rgba(25,196,144,0.04) 0%, transparent 45%);
+    pointer-events: none;
+  }
+  .brand {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
+
+  .conn-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%; max-width: 480px;
+    position: relative; z-index: 1;
+    box-shadow: 0 24px 48px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.03) inset;
+  }
+  .conn-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .conn-sub   { font-size: 13px; color: var(--text3); margin-bottom: 1.75rem; }
+
+  .db-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .db-btn {
+    padding: 10px 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 11px;
+    font-family: var(--sans);
+    text-align: center;
+    transition: all .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+  }
+  .db-btn svg { width: 20px; height: 20px; }
+  .db-btn:hover { border-color: var(--border2); color: var(--text); }
+  .db-btn.active { border-color: var(--teal); background: var(--teal-bg); color: var(--teal); }
+
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 11px; font-weight: 500; color: var(--text3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 9px 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 13px;
+    outline: none; transition: border-color .15s;
+  }
+  .field input:focus { border-color: var(--teal); }
+  .field input::placeholder { color: var(--text3); }
+  .two-col { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+
+  .test-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+  .test-btn {
+    padding: 8px 14px; border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); background: transparent;
+    color: var(--text2); font-size: 12px; transition: all .15s;
+  }
+  .test-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .conn-status {
+    display: none; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--teal); font-family: var(--mono);
+  }
+  .conn-status.err { color: var(--red); }
+  .conn-status.show { display: flex; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .status-dot.pulse { animation: blink 1.2s infinite; }
+
+  .connect-btn {
+    width: 100%; padding: 11px;
+    background: var(--teal); color: #04342C;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; font-family: var(--sans);
+    transition: background .15s;
+  }
+  .connect-btn:hover { background: #15b080; }
+
+  /* ══════════════════════════════════════
+     SCREEN 2 — LOADING
+  ══════════════════════════════════════ */
+  #s-loading {
+    flex-direction: column;
+    align-items: center; justify-content: center; gap: 2rem;
+    background: var(--bg);
+  }
+  .loading-title { font-size: 16px; font-weight: 500; color: var(--text); }
+  .loading-sub   { font-size: 13px; color: var(--text2); font-family: var(--mono); }
+  .pipeline-progress { display: flex; flex-direction: column; gap: 10px; width: 320px; }
+  .pp-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px; color: var(--text3);
+    transition: all .4s;
+  }
+  .pp-step.done  { border-color: var(--teal-dim); color: var(--teal); background: var(--teal-bg); }
+  .pp-step.doing { border-color: var(--border2); color: var(--text); }
+  .pp-icon { width: 16px; height: 16px; flex-shrink: 0; }
+  .spinner {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border2); border-top-color: var(--teal);
+    animation: spin .7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ══════════════════════════════════════
+     SCREEN 3 — MAIN APP
+  ══════════════════════════════════════ */
+  #s-app { flex-direction: column; }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex; align-items: center; gap: 0;
+    height: 48px; padding: 0 1.25rem;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topbar-logo {
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    color: var(--text); letter-spacing: .05em; margin-right: 1.5rem;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .topbar-logo .tl { color: var(--teal); }
+  .nav-pills {
+    display: flex; gap: 0; padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .nav-pill {
+    padding: 5px 14px; border-radius: 6px; font-size: 12px;
+    font-weight: 500; color: var(--text2); border: none;
+    background: transparent; transition: background .15s, color .15s; font-family: var(--sans);
+  }
+  .nav-pill:hover { color: var(--text); }
+  .nav-pill.active { background: var(--surface2); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .db-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text2); font-family: var(--mono);
+    padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: 99px; background: var(--surface2);
+  }
+  .db-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+  .disc-btn {
+    font-size: 11px; color: var(--text3); padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: transparent; font-family: var(--sans);
+    transition: all .15s;
+  }
+  .disc-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* APP BODY */
+  .app-body { display: grid; grid-template-columns: 220px 1fr; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .side-section { padding: 1rem; border-bottom: 1px solid var(--border); }
+  .side-section:last-child { border-bottom: none; flex: 1; }
+  .side-label {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); font-family: var(--mono); margin-bottom: 10px;
+  }
+  .pipe-list { display: flex; flex-direction: column; gap: 4px; }
+  .pipe-li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; padding: 6px 8px; border-radius: var(--radius-sm);
+    color: var(--text3);
+  }
+  .pipe-li.done  { color: var(--teal); }
+  .pipe-li.now   { color: var(--text); font-weight: 500; background: var(--surface2); }
+  .pipe-li .pip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink:0; }
+
+  .hist-list { display: flex; flex-direction: column; gap: 2px; }
+  .hist-li {
+    display: flex; align-items: flex-start; gap: 6px;
+    padding: 7px 8px; border-radius: var(--radius-sm);
+    font-size: 12px; color: var(--text2); cursor: pointer;
+    transition: all .12s; line-height: 1.4;
+  }
+  .hist-li:hover { background: var(--surface2); color: var(--text); }
+  .hist-li.active { background: var(--surface2); color: var(--text); border-left: 2px solid var(--teal); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .htag {
+    font-size: 9px; font-family: var(--mono); padding: 2px 5px;
+    border-radius: 3px; font-weight: 500; flex-shrink: 0; margin-top: 1px;
+  }
+  .htag.srd { background: var(--teal-bg); color: var(--teal); }
+  .htag.mrd { background: var(--purple-bg); color: var(--purple); }
+
+  /* MAIN PANEL */
+  .main-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* PIPELINE BAR */
+  .pipe-bar {
+    display: flex; align-items: center; flex-shrink: 0;
+    padding: 8px 1.25rem; border-bottom: 1px solid var(--border);
+    background: var(--surface); gap: 0; overflow-x: auto;
+  }
+  .pb-step { display: flex; align-items: center; gap: 5px; font-size: 11px; font-family: var(--mono); color: var(--text3); white-space: nowrap; }
+  .pb-step.done { color: var(--teal); }
+  .pb-step.now  { color: var(--text); font-weight: 500; }
+  .pb-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .pb-arr { color: var(--border2); margin: 0 8px; font-size: 12px; }
+
+  /* CONTENT */
+  .content { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .sec-label-sm {
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); font-family: var(--mono); margin-bottom: 8px;
+  }
+
+  /* QUERY BUBBLE */
+  .query-bubble {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem;
+  }
+  .query-text { font-size: 15px; color: var(--text); line-height: 1.5; font-family: var(--sans); }
+  .chip-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .chip {
+    font-size: 11px; font-family: var(--mono); padding: 3px 9px;
+    border-radius: 99px; font-weight: 500;
+  }
+  .chip.srd { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-dim); }
+  .chip.mrd { background: var(--purple-bg); color: var(--purple); border: 1px solid #3d2f8a; }
+  .chip.note { background: transparent; border: 1px solid var(--border); color: var(--text3); font-weight: 400; }
+
+  /* TABLES MATCHED */
+  .tables-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tbl-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 8px 12px;
+    display: flex; flex-direction: column; gap: 3px;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .tbl-chip:hover {
+    border-color: var(--border2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  }
+  .tbl-name { font-size: 12px; font-weight: 500; color: var(--amber); font-family: var(--mono); }
+  .tbl-cols { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  /* SQL BOX */
+  .sql-wrap { position: relative; }
+  .sql-box {
+    background: #080c0b; border: 1px solid var(--teal-dim);
+    border-radius: var(--radius); padding: 1.1rem 1.25rem;
+    overflow-x: auto;
+  }
+  .sql-box pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.85; color: #9FE1CB; white-space: pre; }
+  .kw   { color: #5DCAA5; font-weight: 500; }
+  .tname{ color: #FAC775; }
+  .val  { color: #F5C4B3; }
+  .cmt  { color: #3a5a50; }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 11px; padding: 4px 10px; border-radius: var(--radius-sm);
+    background: rgba(255,255,255,.06); color: #9FE1CB;
+    border: 1px solid rgba(255,255,255,.1); font-family: var(--mono);
+    transition: all .15s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,.12); }
+
+  /* RESULTS */
+  .res-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .res-table { width: 100%; border-collapse: collapse; font-family: var(--mono); }
+  .res-table th {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 7px 12px; text-align: left; font-size: 10px; font-weight: 500;
+    color: var(--text3); text-transform: uppercase; letter-spacing: .08em;
+  }
+  .res-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--text); }
+  .res-table tr:last-child td { border-bottom: none; }
+  .res-table tr:hover td { background: var(--surface2); }
+  .ok { color: var(--teal); }
+
+  /* INPUT BAR */
+  .input-bar {
+    padding: 1rem 1.25rem; border-top: 1px solid var(--border);
+    background: var(--surface); display: flex; gap: 10px; align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .nl-wrap { flex: 1; position: relative; }
+  .nl-input {
+    width: 100%; padding: 10px 14px; padding-right: 40px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 13px;
+    font-family: var(--sans); outline: none; resize: none; min-height: 40px;
+    transition: border-color .15s; line-height: 1.5;
+  }
+  .nl-input:focus { border-color: var(--teal); }
+  .nl-input::placeholder { color: var(--text3); }
+  .run-btn {
+    padding: 10px 20px; background: var(--teal); color: #04342C;
+    border: none; border-radius: var(--radius-sm); font-size: 13px;
+    font-weight: 600; font-family: var(--sans); white-space: nowrap;
+    transition: background .15s;
+  }
+  .run-btn:hover { background: #15b080; }
+
+  /* ══ SCHEMA TAB ══ */
+  .schema-content { padding: 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+  .schema-header { display: flex; align-items: center; justify-content: space-between; }
+  .schema-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .schema-meta { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  .schema-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .schema-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .schema-card:hover {
+    border-color: var(--border2);
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .schema-card-head {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2);
+  }
+  .schema-tname { font-size: 13px; font-weight: 500; color: var(--amber); font-family: var(--mono); }
+  .schema-cnt { font-size: 11px; color: var(--text3); }
+  .schema-cols-list { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .schema-col-row { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-family: var(--mono); }
+  .schema-col-name { color: var(--text2); }
+  .schema-col-type { color: var(--text3); }
+  .pk-tag {
+    font-size: 9px; padding: 1px 5px; border-radius: 3px;
+    background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-dim);
+    font-family: var(--mono);
+  }
+  .fk-tag {
+    font-size: 9px; padding: 1px 5px; border-radius: 3px;
+    background: var(--purple-bg); color: var(--purple); border: 1px solid #3d2f8a;
+    font-family: var(--mono);
+  }
+
+  /* ══ TAB PANELS ══ */
+  .tab-panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .tab-panel.active { display: flex; }
+
+  /* animations */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation: fadeUp .35s ease forwards; }
+  .fade-in-2 { animation: fadeUp .35s .1s ease both; }
+  .fade-in-3 { animation: fadeUp .35s .2s ease both; }
+  .fade-in-4 { animation: fadeUp .35s .3s ease both; }
+  .fade-in-5 { animation: fadeUp .35s .4s ease both; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 1 — DATABASE CONNECTION
+════════════════════════════════════════ -->
+<div id="s-connect" class="screen active">
+  <div class="brand"><span class="brand-dot"></span> QueryNL2SQL · v1.0</div>
+
+  <div class="conn-card fade-in">
+    <div class="conn-title">Connect your database</div>
+    <div class="conn-sub">Select a database type and enter your credentials to begin.</div>
+
+    <div class="db-grid">
+      <button class="db-btn active" onclick="selectDB(this,'postgresql','5432')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="9" rx="10" ry="4" stroke="#19c490" stroke-width="1.5"/>
+          <path d="M6 9v10c0 2.2 4.5 4 10 4s10-1.8 10-4V9" stroke="#19c490" stroke-width="1.5"/>
+          <path d="M6 14c0 2.2 4.5 4 10 4s10-1.8 10-4" stroke="#19c490" stroke-width="1.5"/>
+        </svg>
+        PostgreSQL
+      </button>
+      <button class="db-btn" onclick="selectDB(this,'mysql','3306')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="9" rx="10" ry="4" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M6 9v10c0 2.2 4.5 4 10 4s10-1.8 10-4V9" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M6 14c0 2.2 4.5 4 10 4s10-1.8 10-4" stroke="#8b909e" stroke-width="1.5"/>
+        </svg>
+        MySQL
+      </button>
+      <button class="db-btn" onclick="selectDB(this,'sqlite','')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <rect x="8" y="6" width="16" height="20" rx="2" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M12 12h8M12 16h8M12 20h5" stroke="#8b909e" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        SQLite
+      </button>
+      <button class="db-btn" onclick="selectDB(this,'mssql','1433')">
+        <svg viewBox="0 0 32 32" fill="none">
+          <rect x="6" y="7" width="20" height="18" rx="2" stroke="#8b909e" stroke-width="1.5"/>
+          <path d="M6 13h20M12 13v12" stroke="#8b909e" stroke-width="1.5"/>
+        </svg>
+        MSSQL
+      </button>
+    </div>
+
+    <div class="field" id="field-host">
+      <label>Host / server</label>
+      <input type="text" id="inp-host" value="localhost" placeholder="e.g. 127.0.0.1 or db.myserver.com"/>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Database name</label>
+        <input type="text" id="inp-dbname" value="ecommerce_db" placeholder="my_database"/>
+      </div>
+      <div class="field" id="field-port">
+        <label>Port</label>
+        <input type="text" id="inp-port" value="5432" placeholder="5432"/>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="inp-user" value="root" placeholder="db_user"/>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="inp-pass" value="password123" placeholder="••••••••"/>
+      </div>
+    </div>
+
+    <div class="test-row">
+      <button class="test-btn" onclick="testConn()">Test connection</button>
+      <div class="conn-status" id="conn-status">
+        <span class="status-dot pulse"></span>
+        <span id="conn-msg">Connected successfully</span>
+      </div>
+    </div>
+
+    <button class="connect-btn" onclick="goLoading()">Connect &amp; extract schema →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 2 — LOADING / PIPELINE INIT
+════════════════════════════════════════ -->
+<div id="s-loading" class="screen">
+  <div class="loading-title">Initialising pipeline</div>
+  <div class="loading-sub" id="loading-sub">Connecting to ecommerce_db…</div>
+  <div class="pipeline-progress" style="margin-top:1.5rem" id="pp-steps">
+    <div class="pp-step" id="pp1">
+      <div class="spinner" id="sp1"></div>
+      <span>Connecting to database</span>
+    </div>
+    <div class="pp-step" id="pp2">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Extracting schema</span>
+    </div>
+    <div class="pp-step" id="pp3">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Generating embeddings</span>
+    </div>
+    <div class="pp-step" id="pp4">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Building vector index</span>
+    </div>
+    <div class="pp-step" id="pp5">
+      <svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#555b6a" stroke-width="1.5"/></svg>
+      <span>Pipeline ready</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCREEN 3 — MAIN APP
+════════════════════════════════════════ -->
+<div id="s-app" class="screen">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">Query<span class="tl">NL2SQL</span></div>
+    <div class="nav-pills">
+      <button class="nav-pill active" onclick="switchTab('query', this)">Query workspace</button>
+      <button class="nav-pill" onclick="switchTab('schema', this)">Schema explorer</button>
+    </div>
+    <div class="topbar-right">
+      <div class="db-badge"><span class="dot"></span><span id="topbar-db">ecommerce_db · PostgreSQL</span></div>
+      <button class="disc-btn" onclick="disconnect()">Disconnect</button>
+    </div>
+  </div>
+
+  <!-- APP BODY -->
+  <div class="app-body">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="side-section">
+        <div class="side-label">Pipeline status</div>
+        <div class="pipe-list">
+          <div class="pipe-li done"><span class="pip-dot"></span>Schema extracted</div>
+          <div class="pipe-li done"><span class="pip-dot"></span>Embeddings built</div>
+          <div class="pipe-li done"><span class="pip-dot"></span>Query classified</div>
+          <div class="pipe-li done"><span class="pip-dot"></span>Tables matched</div>
+          <div class="pipe-li now"><span class="pip-dot"></span>SQL generated</div>
+        </div>
+      </div>
+      <div class="side-section" style="flex:1">
+        <div class="side-label">Query history</div>
+        <div class="hist-list" id="hist-list">
+          <div class="hist-li active" onclick="loadHistory(this,0)">
+            <span class="htag srd">SRD</span>Welcome to QueryNL2SQL!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div style="display:flex;flex-direction:column;overflow:hidden;flex:1">
+
+      <!-- QUERY TAB -->
+      <div class="tab-panel active" id="tab-query">
+        <div class="pipe-bar">
+          <div class="pb-step done"><span class="pb-dot"></span>Extracted</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step done"><span class="pb-dot"></span>Embedded</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step done"><span class="pb-dot"></span>Classified</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step done"><span class="pb-dot"></span>Tables matched</div>
+          <span class="pb-arr">→</span>
+          <div class="pb-step now"><span class="pb-dot"></span>SQL generated</div>
+        </div>
+
+        <div class="content" id="query-content">
+
+          <!-- NL QUERY -->
+          <div class="fade-in">
+            <div class="sec-label-sm">Natural language query</div>
+            <div class="query-bubble">
+              <div class="query-text" id="q-text">What was the total revenue for last month?</div>
+              <div class="chip-row">
+                <div class="chip srd" id="q-type-chip">SRD — single-round query</div>
+                <div class="chip note" id="q-note">Standalone · no prior context needed</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLES MATCHED -->
+          <div class="fade-in-2">
+            <div class="sec-label-sm">Relevant tables &amp; columns matched</div>
+            <div class="tables-wrap" id="tables-matched">
+              <div class="tbl-chip">
+                <div class="tbl-name">orders</div>
+                <div class="tbl-cols">order_id, created_at, total_amount, status, region</div>
+              </div>
+              <div class="tbl-chip">
+                <div class="tbl-name">payments</div>
+                <div class="tbl-cols">payment_id, order_id, payment_date, amount, status</div>
+              </div>
+              <div class="tbl-chip">
+                <div class="tbl-name">customers</div>
+                <div class="tbl-cols">customer_id, name, email</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GENERATED SQL -->
+          <div class="fade-in-3">
+            <div class="sec-label-sm">Generated SQL</div>
+            <div class="sql-wrap">
+              <button class="copy-btn" style="right: 70px;" onclick="executeSQL()">Execute</button>
+              <button class="copy-btn" onclick="copySQL()">copy</button>
+              <div class="sql-box">
+                <pre id="sql-display"><span class="kw">SELECT</span>
+  <span class="kw">SUM</span>(p.amount) <span class="kw">AS</span> total_revenue
+<span class="kw">FROM</span>   <span class="tname">orders</span> o
+<span class="kw">JOIN</span>   <span class="tname">payments</span> p <span class="kw">ON</span> o.order_id = p.order_id
+<span class="kw">WHERE</span>
+  p.status       = <span class="val">'completed'</span>
+  <span class="kw">AND</span> p.payment_date >= <span class="val">DATE_TRUNC</span>(<span class="val">'month'</span>, CURRENT_DATE - <span class="val">INTERVAL</span> <span class="val">'1 month'</span>)
+  <span class="kw">AND</span> p.payment_date &lt;  <span class="val">DATE_TRUNC</span>(<span class="val">'month'</span>, CURRENT_DATE);</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- RESULTS -->
+          <div class="fade-in-4">
+            <div class="sec-label-sm">Query results</div>
+            <div class="res-wrap">
+              <table class="res-table" id="res-table">
+                <thead>
+                  <tr>
+                    <th>total_revenue</th>
+                    <th>currency</th>
+                    <th>period</th>
+                    <th>status</th>
+                  </tr>
+                </thead>
+                <tbody id="res-body">
+                  <tr>
+                    <td>₹ 4,82,310.00</td>
+                    <td>INR</td>
+                    <td>March 2026</td>
+                    <td class="ok">completed</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /content -->
+
+        <!-- INPUT BAR -->
+        <div class="input-bar">
+          <div class="nl-wrap">
+            <textarea class="nl-input" id="nl-input" rows="1"
+              placeholder="Ask a question in plain English… e.g. 'Show me total orders per customer'"
+              onkeydown="handleKey(event)"></textarea>
+          </div>
+          <button class="run-btn" onclick="runQuery()">Run query ↵</button>
+        </div>
+      </div>
+
+      <!-- SCHEMA TAB -->
+      <div class="tab-panel" id="tab-schema">
+        <div class="schema-content">
+          <div class="schema-header">
+            <div class="schema-title">Schema explorer</div>
+            <div class="schema-meta" id="schema-meta">ecommerce_db · PostgreSQL · 12 tables</div>
+          </div>
+          <div class="schema-grid" id="schema-grid">
+
+            <div class="schema-card">
+              <div class="schema-card-head">
+                <div class="schema-tname">orders</div>
+                <div class="schema-cnt">6 columns</div>
+              </div>
+              <div class="schema-cols-list">
+                <div class="schema-col-row"><span class="schema-col-name">order_id</span><div style="display:flex;gap:4px;align-items:center"><span class="pk-tag">PK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">customer_id</span><div style="display:flex;gap:4px;align-items:center"><span class="fk-tag">FK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">created_at</span><span class="schema-col-type">TIMESTAMP</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">total_amount</span><span class="schema-col-type">DECIMAL</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">status</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">region</span><span class="schema-col-type">VARCHAR</span></div>
+              </div>
+            </div>
+
+            <div class="schema-card">
+              <div class="schema-card-head">
+                <div class="schema-tname">payments</div>
+                <div class="schema-cnt">5 columns</div>
+              </div>
+              <div class="schema-cols-list">
+                <div class="schema-col-row"><span class="schema-col-name">payment_id</span><div style="display:flex;gap:4px;align-items:center"><span class="pk-tag">PK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">order_id</span><div style="display:flex;gap:4px;align-items:center"><span class="fk-tag">FK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">payment_date</span><span class="schema-col-type">TIMESTAMP</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">amount</span><span class="schema-col-type">DECIMAL</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">status</span><span class="schema-col-type">VARCHAR</span></div>
+              </div>
+            </div>
+
+            <div class="schema-card">
+              <div class="schema-card-head">
+                <div class="schema-tname">customers</div>
+                <div class="schema-cnt">5 columns</div>
+              </div>
+              <div class="schema-cols-list">
+                <div class="schema-col-row"><span class="schema-col-name">customer_id</span><div style="display:flex;gap:4px;align-items:center"><span class="pk-tag">PK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">name</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">email</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">phone</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">created_at</span><span class="schema-col-type">TIMESTAMP</span></div>
+              </div>
+            </div>
+
+            <div class="schema-card">
+              <div class="schema-card-head">
+                <div class="schema-tname">products</div>
+                <div class="schema-cnt">6 columns</div>
+              </div>
+              <div class="schema-cols-list">
+                <div class="schema-col-row"><span class="schema-col-name">product_id</span><div style="display:flex;gap:4px;align-items:center"><span class="pk-tag">PK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">name</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">category</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">price</span><span class="schema-col-type">DECIMAL</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">stock_qty</span><span class="schema-col-type">INT</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">supplier_id</span><div style="display:flex;gap:4px;align-items:center"><span class="fk-tag">FK</span><span class="schema-col-type">INT</span></div></div>
+              </div>
+            </div>
+
+            <div class="schema-card">
+              <div class="schema-card-head">
+                <div class="schema-tname">order_items</div>
+                <div class="schema-cnt">5 columns</div>
+              </div>
+              <div class="schema-cols-list">
+                <div class="schema-col-row"><span class="schema-col-name">item_id</span><div style="display:flex;gap:4px;align-items:center"><span class="pk-tag">PK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">order_id</span><div style="display:flex;gap:4px;align-items:center"><span class="fk-tag">FK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">product_id</span><div style="display:flex;gap:4px;align-items:center"><span class="fk-tag">FK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">quantity</span><span class="schema-col-type">INT</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">unit_price</span><span class="schema-col-type">DECIMAL</span></div>
+              </div>
+            </div>
+
+            <div class="schema-card">
+              <div class="schema-card-head">
+                <div class="schema-tname">suppliers</div>
+                <div class="schema-cnt">4 columns</div>
+              </div>
+              <div class="schema-cols-list">
+                <div class="schema-col-row"><span class="schema-col-name">supplier_id</span><div style="display:flex;gap:4px;align-items:center"><span class="pk-tag">PK</span><span class="schema-col-type">INT</span></div></div>
+                <div class="schema-col-row"><span class="schema-col-name">name</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">country</span><span class="schema-col-type">VARCHAR</span></div>
+                <div class="schema-col-row"><span class="schema-col-name">contact_email</span><span class="schema-col-type">VARCHAR</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right panel -->
+  </div><!-- /app-body -->
+</div><!-- /s-app -->
+
+<script>
+/* ── API CONFIG ── */
+const API_BASE = 'http://localhost:8000/api';
+let sessionId = null;
+
+function escHtml(s) {
+  return String(s)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function renderSQL(sql) {
+  if (!sql) return '<span class="cmt">-- No SQL generated</span>';
+  let x = escHtml(sql);
+  const kw = [
+    'SELECT','FROM','WHERE','JOIN','LEFT','RIGHT','INNER','OUTER','ON',
+    'GROUP BY','ORDER BY','LIMIT','HAVING','WITH','AS','AND','OR','DISTINCT'
+  ];
+  kw.forEach(k => {
+    const re = new RegExp('\\b' + k.replace(' ', '\\s+') + '\\b', 'gi');
+    x = x.replace(re, (m) => '<span class="kw">' + m.toUpperCase() + '</span>');
+  });
+  return x;
+}
+
+async function apiPost(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const txt = await res.text();
+  let json = null;
+  try { json = txt ? JSON.parse(txt) : null; } catch (_) {}
+  if (!res.ok) {
+    const msg = (json && (json.message || json.detail || json.error)) ? JSON.stringify(json) : (txt || ('HTTP ' + res.status));
+    throw new Error(msg);
+  }
+  return json;
+}
+
+async function apiGet(path) {
+  const res = await fetch(API_BASE + path, { method: 'GET' });
+  const txt = await res.text();
+  let json = null;
+  try { json = txt ? JSON.parse(txt) : null; } catch (_) {}
+  if (!res.ok) {
+    const msg = (json && (json.message || json.detail || json.error)) ? JSON.stringify(json) : (txt || ('HTTP ' + res.status));
+    throw new Error(msg);
+  }
+  return json;
+}
+
+function renderSchemaExplorer(schemaData) {
+  const grid = document.getElementById('schema-grid');
+  if (!grid) return;
+  const tables = Object.keys(schemaData || {});
+  if (tables.length === 0) {
+    grid.innerHTML = '<div class="schema-card"><div class="schema-card-head"><div class="schema-tname">No schema</div><div class="schema-cnt">0 columns</div></div><div class="schema-cols-list"><div class="schema-col-row"><span class="schema-col-name">No data available</span><span class="schema-col-type">N/A</span></div></div></div>';
+    return;
+  }
+
+  grid.innerHTML = tables.map(function(tableName){
+    const info = schemaData[tableName] || {};
+    const columns = Array.isArray(info.columns) ? info.columns : [];
+    const pks = new Set(Array.isArray(info.primary_keys) ? info.primary_keys : []);
+    const fkCols = new Set(Array.isArray(info.foreign_keys) ? info.foreign_keys.map(f => f.column) : []);
+    const colsHtml = columns.map(function(c){
+      const colName = c && c.column_name ? String(c.column_name) : '';
+      const dataType = c && c.data_type ? String(c.data_type).toUpperCase() : 'UNKNOWN';
+      const tag = pks.has(colName)
+        ? '<span class="pk-tag">PK</span>'
+        : (fkCols.has(colName) ? '<span class="fk-tag">FK</span>' : '');
+      return '<div class="schema-col-row"><span class="schema-col-name">' + escHtml(colName) + '</span><div style="display:flex;gap:4px;align-items:center">' + tag + '<span class="schema-col-type">' + escHtml(dataType) + '</span></div></div>';
+    }).join('');
+
+    return '<div class="schema-card"><div class="schema-card-head"><div class="schema-tname">' + escHtml(tableName) + '</div><div class="schema-cnt">' + columns.length + ' columns</div></div><div class="schema-cols-list">' + colsHtml + '</div></div>';
+  }).join('');
+}
+
+/* ── DB TYPE SELECT ── */
+var selectedEngine = 'postgresql';
+function selectDB(el, engine, port) {
+  document.querySelectorAll('.db-btn').forEach(b => {
+    b.classList.remove('active');
+    b.querySelectorAll('circle,path,rect,ellipse').forEach(s => s.setAttribute('stroke','#8b909e'));
+  });
+  el.classList.add('active');
+  el.querySelectorAll('circle,path,rect,ellipse').forEach(s => s.setAttribute('stroke','#19c490'));
+  selectedEngine = engine;
+  document.getElementById('inp-port').value = port;
+  if (engine === 'sqlite') {
+    document.getElementById('inp-host').value = 'local file';
+    document.getElementById('inp-dbname').value = 'database.db';
+    document.getElementById('inp-user').value = '';
+    document.getElementById('inp-pass').value = '';
+  } else {
+    document.getElementById('inp-host').value = 'localhost';
+    document.getElementById('inp-dbname').value = 'ecommerce_db';
+    document.getElementById('inp-user').value = 'root';
+  }
+}
+
+/* ── TEST CONNECTION ── */
+async function testConn() {
+  var s = document.getElementById('conn-status');
+  var m = document.getElementById('conn-msg');
+  s.classList.remove('err');
+  m.textContent = 'Testing connection…';
+  s.classList.add('show');
+
+  const payload = {
+    engine: selectedEngine,
+    host: document.getElementById('inp-host').value,
+    port: Number(document.getElementById('inp-port').value || 0) || null,
+    database: document.getElementById('inp-dbname').value,
+    username: document.getElementById('inp-user').value,
+    password: document.getElementById('inp-pass').value,
+  };
+
+  try {
+    const out = await apiPost('/connect', payload);
+    if (out.ok) {
+      s.classList.remove('err');
+      m.textContent = 'Connected (Qdrant + PostgreSQL validated)';
+    } else {
+      s.classList.add('err');
+      m.textContent = (out.message || 'Connection failed');
+    }
+  } catch (e) {
+    s.classList.add('err');
+    m.textContent = 'Connection failed — ' + (e && e.message ? e.message : 'unknown error');
+  }
+}
+
+/* ── GO TO LOADING SCREEN ── */
+async function goLoading() {
+  var dbname = document.getElementById('inp-dbname').value || 'database';
+  document.getElementById('loading-sub').textContent = 'Connecting to ' + dbname + '…';
+  show('s-loading');
+  var steps = [
+    {id:'pp1', msg:'Extracting schema…'},
+    {id:'pp2', msg:'Generating embeddings…'},
+    {id:'pp3', msg:'Building vector index…'},
+    {id:'pp4', msg:'Finalising pipeline…'},
+    {id:'pp5', msg:'Ready!'},
+  ];
+  var checkSVG = '<svg class="pp-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#19c490" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#19c490" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var spinHTML = '<div class="spinner"></div>';
+
+  const payload = {
+    engine: selectedEngine,
+    host: document.getElementById('inp-host').value,
+    port: Number(document.getElementById('inp-port').value || 0) || null,
+    database: document.getElementById('inp-dbname').value,
+    username: document.getElementById('inp-user').value,
+    password: document.getElementById('inp-pass').value,
+  };
+  let connectOk = false;
+  let connectMessage = '';
+  let schemaPayload = null;
+  apiPost('/connect', payload)
+    .then(async out => {
+      connectOk = !!out.ok;
+      connectMessage = out.message || '';
+      if (connectOk) {
+        try {
+          schemaPayload = await apiGet('/schema');
+        } catch (e) {
+          schemaPayload = null;
+        }
+      }
+    })
+    .catch(err => { connectOk = false; connectMessage = (err && err.message) ? err.message : 'connect failed'; });
+
+  function doStep(i) {
+    if (i >= steps.length) {
+      setTimeout(function(){
+        if (!connectOk) {
+          show('s-connect');
+          var s = document.getElementById('conn-status');
+          var m = document.getElementById('conn-msg');
+          s.classList.add('show');
+          s.classList.add('err');
+          m.textContent = 'Connect failed — ' + connectMessage;
+          return;
+        }
+        var eng = selectedEngine.charAt(0).toUpperCase() + selectedEngine.slice(1);
+        document.getElementById('topbar-db').textContent = dbname + ' · ' + eng;
+        if (schemaPayload && schemaPayload.ok) {
+          renderSchemaExplorer(schemaPayload.schema_data || {});
+          document.getElementById('schema-meta').textContent = dbname + ' · ' + eng + ' · ' + String(schemaPayload.table_count || 0) + ' tables';
+        } else {
+          document.getElementById('schema-meta').textContent = dbname + ' · ' + eng + ' · schema unavailable';
+        }
+        show('s-app');
+      }, 500);
+      return;
+    }
+    var el = document.getElementById(steps[i].id);
+    el.classList.add('doing');
+    el.innerHTML = spinHTML + '<span>' + el.querySelector('span').textContent + '</span>';
+    document.getElementById('loading-sub').textContent = steps[i].msg;
+    setTimeout(function(){
+      el.classList.remove('doing');
+      el.classList.add('done');
+      el.innerHTML = checkSVG + '<span>' + el.querySelector('span').textContent + '</span>';
+      if (i + 1 < steps.length) {
+        var next = document.getElementById(steps[i+1].id);
+        next.classList.add('doing');
+      }
+      doStep(i + 1);
+    }, 700);
+  }
+  doStep(0);
+}
+
+/* ── SCREEN SWITCH ── */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function disconnect() { show('s-connect'); }
+
+/* ── TAB SWITCH ── */
+function switchTab(tab, btn) {
+  document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+/* ── MOCK HISTORY DATA ── */
+var historyData = [
+  {
+    query: "Welcome to QueryNL2SQL!",
+    type: "SRD", note: "Ready to query the database",
+    tables: [{name:"instructions", cols:"type a query below"}],
+    sql: '<span class="kw">SELECT</span> <span class="val">*</span> <span class="kw">FROM</span> users <span class="kw">LIMIT</span> <span class="val">1</span>;',
+    raw_sql: 'SELECT * FROM users LIMIT 1;',
+    thead: ["status"],
+    tbody: [["Type a natural language query below and hit Run query."]]
+  }
+];
+
+let activeIdx = 0;
+
+function loadHistory(el, idx) {
+  if (!historyData[idx]) return;
+  activeIdx = idx;
+  document.querySelectorAll('.hist-li').forEach(h => h.classList.remove('active'));
+  if (el) el.classList.add('active');
+  var d = historyData[idx];
+  document.getElementById('q-text').textContent = d.query;
+  var typeChip = document.getElementById('q-type-chip');
+  typeChip.textContent = d.type === 'SRD' ? 'SRD — single-round query' : 'MRD — multi-round query';
+  typeChip.className = 'chip ' + (d.type ? d.type.toLowerCase() : 'srd');
+  document.getElementById('q-note').textContent = d.note;
+  var tablesHTML = d.tables.map(function(t){
+    return '<div class="tbl-chip"><div class="tbl-name">'+t.name+'</div><div class="tbl-cols">'+t.cols+'</div></div>';
+  }).join('');
+  document.getElementById('tables-matched').innerHTML = tablesHTML;
+  document.getElementById('sql-display').innerHTML = d.sql;
+  var thead = d.thead.map(function(h){ return '<th>'+h+'</th>'; }).join('');
+  var tbody = d.tbody.map(function(r){
+    return '<tr>'+r.map(function(c){ return '<td>'+c+'</td>'; }).join('')+'</tr>';
+  }).join('');
+  document.querySelector('.res-table thead tr').innerHTML = thead;
+  document.getElementById('res-body').innerHTML = tbody;
+}
+
+function renderHistorySidebar() {
+  const el = document.getElementById('hist-list');
+  el.innerHTML = historyData.map(function(d, i){
+    const tagClass = d.type === 'MRD' ? 'mrd' : (d.type==='ERROR' ? 'mrd':'srd'); 
+    return '<div class="hist-li' + (i === activeIdx ? ' active' : '') + '" onclick="loadHistory(this, ' + i + ')">' +
+      '<span class="htag ' + tagClass + '">' + escHtml((d.type||'').substring(0,3)) + '</span>' + 
+      escHtml(d.query.substring(0,32) + (d.query.length > 32 ? '…' : '')) + '</div>';
+  }).join('');
+}
+
+/* ── RUN QUERY ── */
+async function runQuery() {
+  var input = document.getElementById('nl-input');
+  var q = input.value.trim();
+  if (!q) return;
+
+  var newEntry = {
+    query: q,
+    type: "SRD", note: "Generating SQL...",
+    tables: [{name: "...", cols: "matching tables via vector search"}],
+    sql: '<span class="cmt">-- Generating SQL for: ' + escHtml(q) + '</span>',
+    raw_sql: '',
+    thead: ["status", "message"],
+    tbody: [["executing", "SQL is being generated."]]
+  };
+
+  historyData.unshift(newEntry);
+  activeIdx = 0;
+  renderHistorySidebar();
+  loadHistory(document.querySelector('.hist-li.active'), 0);
+
+  try {
+    const out = await apiPost('/query', { query: q, top_k: 5, session_id: sessionId });
+    sessionId = out.session_id;
+
+    const type = out.query_type || 'UNKNOWN';
+    const warnings = Array.isArray(out.warnings) ? out.warnings : [];
+    const baseNote = (type === 'MRD' ? 'Multi-round · combined with previous turns' : 'Standalone · no prior context needed');
+    
+    newEntry.type = type;
+    newEntry.note = warnings.length ? (baseNote + ' · ' + warnings[0]) : baseNote;
+    
+    const schema = out.schema || {};
+    const tbls = Object.keys(schema);
+    if (tbls.length === 0) {
+      newEntry.tables = [{name: "No match", cols: "No schema context found"}];
+    } else {
+      newEntry.tables = tbls.map(function(t){
+        const cols = (schema[t] && schema[t].columns) ? schema[t].columns.map(c => c.column_name).slice(0,10).join(', ') : '';
+        return {name: t, cols: cols || '...' };
+      });
+    }
+
+    if (out.sql) {
+      newEntry.sql = renderSQL(out.sql);
+      newEntry.raw_sql = out.sql; 
+    } else {
+      const firstWarn = (warnings.length > 0) ? warnings[0] : 'No SQL generated (schema mismatch or model unavailable)';
+      newEntry.sql = '<span class="cmt">-- ' + escHtml(firstWarn) + '</span>';
+      newEntry.raw_sql = '';
+    }
+
+    newEntry.thead = ["status", "message", "session_id", "sql_valid"];
+    newEntry.tbody = [
+      ["ready", warnings.length ? warnings.join(' | ') : "SQL is ready. Click Execute to run.", out.session_id, String(!!out.sql_valid)]
+    ];
+
+  } catch (e) {
+    newEntry.type = "ERROR";
+    newEntry.note = "Backend error (see results panel)";
+    newEntry.tables = [{name:"error", cols:"failed to fetch schema/sql"}];
+    newEntry.sql = '<span class="cmt">-- Backend error: ' + escHtml(e && e.message ? e.message : 'unknown') + '</span>';
+    newEntry.raw_sql = '';
+    newEntry.thead = ['error'];
+    newEntry.tbody = [['Backend error — ' + escHtml(e && e.message ? e.message : 'unknown')]];
+  }
+
+  renderHistorySidebar();
+  loadHistory(document.querySelector('.hist-li.active'), 0);
+  input.value = '';
+}
+
+/* ── EXECUTE SQL ── */
+async function executeSQL() {
+  const d = historyData[activeIdx];
+  if (!d || !d.raw_sql) {
+      alert("No valid SQL found to execute!");
+      return;
+  }
+  
+  const payload = {
+    engine: selectedEngine,
+    host: document.getElementById('inp-host').value,
+    port: Number(document.getElementById('inp-port').value || 0) || null,
+    database: document.getElementById('inp-dbname').value,
+    username: document.getElementById('inp-user').value,
+    password: document.getElementById('inp-pass').value,
+    sql: d.raw_sql
+  };
+
+  document.querySelector('.res-table thead tr').innerHTML = '<th>status</th>';
+  document.getElementById('res-body').innerHTML = '<tr><td style="color:var(--teal)">Executing query on db...</td></tr>';
+
+  try {
+    const out = await apiPost('/execute', payload);
+    if (!out.ok) {
+       d.thead = ["error"];
+       d.tbody = [[out.error]];
+    } else if (out.columns && out.columns.length > 0) {
+       d.thead = out.columns;
+       d.tbody = out.rows.length ? out.rows : [["No rows returned."]];
+    } else {
+       d.thead = ["status"];
+       d.tbody = [["Query executed successfully (no rows returned)."]];
+    }
+  } catch (e) {
+       d.thead = ["error"];
+       d.tbody = [[e.message]];
+  }
+  loadHistory(document.querySelector('.hist-li.active'), activeIdx);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runQuery(); }
+}
+
+/* ── COPY SQL ── */
+function copySQL() {
+  var text = document.getElementById('sql-display').innerText;
+  navigator.clipboard.writeText(text).catch(function(){});
+  var btn = document.querySelector('.copy-btn');
+  btn.textContent = 'copied!';
+  setTimeout(function(){ btn.textContent = 'copy'; }, 1500);
+}
+</script>
+</body>
+</html>

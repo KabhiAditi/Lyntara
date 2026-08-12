@@ -1,0 +1,41 @@
+# Environments
+.env
+.env.*
+.venv
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# IDE / Assistant Tooling
+.vscode/
+.idea/
+*.swp
+.gemini/
+
+# Project Specific
+serialized_schema.txt
+
+# Node / Vite
+node_modules/
+dist/
+cursor_fastapi_server_setup_with_search.md
+Tests/
+View_Selection/

@@ -57,7 +57,7 @@ def get_settings() -> Settings:
         qdrant_port=int(os.getenv("QDRANT_PORT", "6333")),
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "table"),
         embedding_model_name=os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2"),
-        gemini_model_name=os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash"),
+        gemini_model_name=os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash"),
         pg_host=os.getenv("PGHOST", "localhost"),
         pg_port=int(os.getenv("PGPORT", "5432")),
         pg_database=os.getenv("PGDATABASE", ""),

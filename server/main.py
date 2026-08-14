@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
         qdrant_ok = False
         try:
             import httpx
-            url = f"http://{qdrant_host}:{qdrant_port}/collections/{settings.qdrant_collection}"
+            url = f"http://{qdrant_host}:{qdrant_port}/collections"
             res = httpx.get(url, timeout=2.0)
             if res.status_code == 200:
                 qdrant_msg = "Qdrant connection succeeded."

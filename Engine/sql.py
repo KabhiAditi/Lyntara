@@ -19,7 +19,7 @@ import httpx
 
 
 class NL2SQL:
-    def __init__(self, model_name: str = "gemini-3-flash-preview"):
+    def __init__(self, model_name: str = "gemini-3.5-flash"):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set.")

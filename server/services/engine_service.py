@@ -133,6 +133,7 @@ def run_readonly_pipeline(query: str, top_k: int = 5, session_id: str | None = N
                     sql_valid = True
     except Exception as e:
         warnings.append(f"SQL generation failed ({type(e).__name__}).")
+        print(e)
 
     return {
         "ok": True,

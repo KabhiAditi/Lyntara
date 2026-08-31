@@ -23,7 +23,7 @@ def _get_nl2sql(model_name: str):
     return NL2SQL(model_name=model_name)
 
 @lru_cache(maxsize=8)
-def _get_retriever(collection_name: str = "table", context_file: str = "View_Selection/context.json", model_name: str = "all-MiniLM-L6-v2"):
+def _get_retriever(collection_name: str = "table", context_file: str = "View_Selection/context.json", model_name: str = "BAAI/bge-large-en-v1.5"):
     return SchemaRetriever(collection_name=collection_name, context_file=context_file, model_name=model_name)
 
 def _extract_matched_tables(schema: dict[str, Any] | None) -> list[str]:

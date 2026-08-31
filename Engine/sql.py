@@ -177,7 +177,7 @@ class SchemaRetriever:
         qdrant_host: str = "localhost",
         qdrant_port: int = 6333,
         collection_name: str = "table",
-        model_name: str = "all-MiniLM-L6-v2",
+        model_name: str = "BAAI/bge-large-en-v1.5",
         context_file: str = "View_Selection/context.json",
         hf_endpoint: Optional[str] = None,
         check_compatibility: bool = False,

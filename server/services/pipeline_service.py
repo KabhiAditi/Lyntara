@@ -299,7 +299,7 @@ def upsert_to_qdrant(
     column_col_name = f"{database}-table-column"
 
     # Load embedding model (read from env so it stays in sync with SchemaRetriever)
-    embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+    embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-large-en-v1.5")
     model = SentenceTransformer(embedding_model_name, trust_remote_code=True)
     vector_size = model.get_sentence_embedding_dimension()
     print(f"[upsert] Using embedding model '{embedding_model_name}' — vector size: {vector_size}")

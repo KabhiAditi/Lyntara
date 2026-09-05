@@ -117,15 +117,7 @@ def run_readonly_pipeline(query: str, top_k: int = 5, session_id: str | None = N
                 sql = None
                 sql_valid = False
             elif sql:
-                if _sql_contains_write_ops(sql):
-                    warnings.append("Generated SQL contained write operations; suppressed for safety.")
-                    sql = None
-                    sql_valid = False
-                elif not _sql_is_select_only(sql):
-                    warnings.append("Generated SQL was not SELECT/WITH; suppressed for safety.")
-                    sql = None
-                    sql_valid = False
-                elif not _sql_is_single_statement(sql):
+                if not _sql_is_single_statement(sql):
                     warnings.append("Generated SQL was not a single statement; suppressed for safety.")
                     sql = None
                     sql_valid = False

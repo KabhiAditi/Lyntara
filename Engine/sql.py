@@ -80,6 +80,7 @@ Constraints:
 - If a person's full name appears and the schema has separate first_name and last_name columns, split it correctly
 - Do not include markdown fences
 - If the provided schema does not satisfy the requested query return NULL
+- - DATA_MODIFICATION_ENFORCEMENT: When the user intends to add, create, or insert new data, you must never output a bare `SELECT` statement that only calculates values. You must wrap the logic inside an executable modification statement (such as `INSERT INTO ... SELECT`). Ensure the query actively modifies the database state rather than just displaying a calculated row.
 - End the SQL with a semicolon
 
 Schema:

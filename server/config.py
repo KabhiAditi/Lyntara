@@ -16,6 +16,11 @@ class Settings:
     # API
     cors_allow_origins: list[str]
 
+    # Schema selection strategy for SQL generation:
+    #   "embeddings" -> Qdrant top-k retrieval   "full" -> entire schema in prompt
+    schema_mode: str
+    schema_top_k: int
+
     # Qdrant (schema search)
     qdrant_host: str
     qdrant_port: int
@@ -62,6 +67,8 @@ def get_settings() -> Settings:
         repo_root=repo_root,
         context_json_path=context_json_path,
         cors_allow_origins=cors_allow_origins,
+        schema_mode=os.getenv("SCHEMA_MODE", "embeddings").strip().lower(),
+        schema_top_k=int(os.getenv("SCHEMA_TOP_K", "5")),
         qdrant_host=os.getenv("QDRANT_HOST", "localhost"),
         qdrant_port=int(os.getenv("QDRANT_PORT", "6333")),
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "table"),

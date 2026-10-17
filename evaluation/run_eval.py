@@ -30,6 +30,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(REPO / ".env")
+
 import psycopg2  # noqa: E402
 from Engine.llm import LLMError, OllamaProvider, prompts  # noqa: E402
 
@@ -87,7 +91,7 @@ def load_schema(db: str, mode: str, question: str, top_k: int) -> dict:
     from Engine.sql import SchemaRetriever
     r = SchemaRetriever(collection_name=f"{db}-table",
                         context_file=str(ctx_path),
-                        model_name=os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2"))
+                        model_name=os.getenv("EMBEDDING_MODEL_NAME", "Alibaba-NLP/gte-large-en-v1.5"))
     hits = r.search_schema(question, top_k=top_k, collection_name=f"{db}-table")
     tables = [h["payload"]["table"] for h in (hits.get("result") or []) if h.get("payload", {}).get("table")]
     picked = {t: full[t] for t in tables if t in full}

@@ -19,6 +19,7 @@ from Engine.classifier import predict_query_with_confidence, combine_mrd_query, 
 from Engine.sql import SchemaRetriever, NL2SQL
 from Engine.llm import STYLE_CHATML, LLMError, get_provider
 from Engine.llm import prompts as sql_prompts
+from server.services import schema_service
 
 @lru_cache(maxsize=1)
 def _get_nl2sql(model_name: str | None = None):
@@ -94,15 +95,24 @@ def run_readonly_pipeline(query: str, top_k: int = 5, session_id: str | None = N
     except Exception as e:
         warnings.append(f"Classifier/Combiner error: {type(e).__name__}")
 
-    # 2. Schema Retrieval (via Engine)
+    # 2. Schema selection -- dense retrieval or the full schema, per SCHEMA_MODE
     schema: dict[str, Any] | None = None
     try:
-        retriever = _get_retriever(collection, context_file, settings.embedding_model_name)
-        schema = retriever.retrieve(resolved_query, top_k=top_k)
+        schema, schema_warnings = schema_service.select_schema(
+            repo_root=settings.repo_root,
+            database=database_name,
+            query=resolved_query,
+            mode=settings.schema_mode,
+            top_k=top_k or settings.schema_top_k,
+            collection=collection,
+            fallback_context=settings.context_json_path,
+            embedding_model=settings.embedding_model_name,
+        )
+        warnings.extend(schema_warnings)
         if not schema:
             warnings.append("No matching schema context found for query.")
     except Exception as e:
-        warnings.append(f"Schema retrieval failed ({type(e).__name__}).")
+        warnings.append(f"Schema selection failed ({type(e).__name__}).")
 
     matched_tables = _extract_matched_tables(schema)
 
@@ -164,8 +174,16 @@ def fix_sql_with_llm(database_name: str, nl_query: str, failed_sql: str, error_m
     context_file = f"View_Selection/{database_name}_context.json"
 
     try:
-        retriever = _get_retriever(collection, context_file, settings.embedding_model_name)
-        schema = retriever.retrieve(nl_query, top_k=5)
+        schema, _ = schema_service.select_schema(
+            repo_root=settings.repo_root,
+            database=database_name,
+            query=nl_query,
+            mode=settings.schema_mode,
+            top_k=settings.schema_top_k,
+            collection=collection,
+            fallback_context=settings.context_json_path,
+            embedding_model=settings.embedding_model_name,
+        )
     except Exception:
         return None
 

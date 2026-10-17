@@ -1,5 +1,9 @@
 import os
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+
+# HF_ENDPOINT used to be hardcoded to a mirror here. Importing this module then
+# repointed the Hugging Face hub for the whole process, and a revalidation
+# request to an unreachable mirror would hang model loading indefinitely.
+# It is now opt-in: set HF_ENDPOINT in the environment if you need a mirror.
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("USE_TORCH", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -298,9 +302,8 @@ class SchemaRetriever:
         hf_endpoint: Optional[str] = None,
         check_compatibility: bool = False,
     ):
-        # if hf_endpoint:
-        #     os.environ["HF_ENDPOINT"] = hf_endpoint
-        os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+        if hf_endpoint:
+            os.environ["HF_ENDPOINT"] = hf_endpoint
         os.environ.setdefault("USE_TF", "0")
         os.environ.setdefault("USE_TORCH", "1")
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")

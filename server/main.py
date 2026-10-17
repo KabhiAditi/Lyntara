@@ -179,7 +179,10 @@ def create_app() -> FastAPI:
         settings = get_settings()
         qdrant_host = req.qdrant_host or settings.qdrant_host
         qdrant_port = req.qdrant_port or settings.qdrant_port
-        done = check_pipeline_done(req.database, qdrant_host, qdrant_port)
+        done = check_pipeline_done(
+            req.database, qdrant_host, qdrant_port,
+            require_embeddings=(settings.schema_mode != "full"),
+        )
         if done:
             return PipelineStatusResponse(
                 ok=True, already_indexed=True,

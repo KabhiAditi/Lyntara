@@ -386,11 +386,20 @@ def check_pipeline_done(
     database: str,
     qdrant_host: str = "localhost",
     qdrant_port: int = 6333,
+    require_embeddings: bool = True,
 ) -> bool:
-    """Return True if collection + context JSON already exist for this database."""
+    """Return True if this database is ready to be queried.
+
+    The enriched context JSON is always required -- it is what the prompt is
+    built from. Qdrant collections are only required when SQL generation uses
+    dense retrieval; under SCHEMA_MODE=full the vector store is not consulted,
+    so demanding it would block an otherwise-working setup.
+    """
+    context_exists = (_VIEW_DIR / f"{database}_context.json").exists()
+    if not require_embeddings:
+        return context_exists
     base_url = _qdrant_base_url(qdrant_host, qdrant_port)
     collection_exists = _collection_exists(base_url, f"{database}-table")
-    context_exists = (_VIEW_DIR / f"{database}_context.json").exists()
     return collection_exists and context_exists
 
 

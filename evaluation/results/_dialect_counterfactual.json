@@ -1,0 +1,221 @@
+{
+  "1.7b-step1150__embeddings": {
+    "n": 20,
+    "accuracy_before": 0.65,
+    "accuracy_after_dialect_fix": 0.75,
+    "recovered": 2,
+    "repairs": [
+      {
+        "id": 2,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT COUNT(*) FROM customer WHERE country = 'Canada';",
+        "error": null
+      },
+      {
+        "id": 19,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT T2.name FROM genre AS T1 JOIN track AS T2 ON T1.genre_id = T2.genre_id WHERE T2.genre_id = (SELECT genre_id FROM genre WHERE name = 'Rock') LIMIT 10;",
+        "error": null
+      }
+    ]
+  },
+  "1.7b-step1150__full": {
+    "n": 20,
+    "accuracy_before": 0.6,
+    "accuracy_after_dialect_fix": 0.7,
+    "recovered": 2,
+    "repairs": [
+      {
+        "id": 2,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT COUNT(*) FROM customer WHERE country = 'Canada';",
+        "error": null
+      },
+      {
+        "id": 14,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT first_name, last_name FROM customer WHERE country = 'Brazil';",
+        "error": null
+      },
+      {
+        "id": 15,
+        "applied": [
+          "group-by"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT name FROM genre GROUP BY genre_id, name ORDER BY COUNT(*) DESC LIMIT 1;",
+        "error": null
+      },
+      {
+        "id": 20,
+        "applied": [
+          "group-by"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT last_name FROM customer GROUP BY support_rep_id, last_name ORDER BY COUNT(*) DESC;",
+        "error": null
+      }
+    ]
+  },
+  "1.7b-step200__embeddings": {
+    "n": 20,
+    "accuracy_before": 0.65,
+    "accuracy_after_dialect_fix": 0.75,
+    "recovered": 2,
+    "repairs": [
+      {
+        "id": 2,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT COUNT(*) FROM customer WHERE country = 'Canada';",
+        "error": null
+      },
+      {
+        "id": 14,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT first_name, last_name FROM customer WHERE country = 'Brazil';",
+        "error": null
+      },
+      {
+        "id": 15,
+        "applied": [
+          "group-by"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT T2.genre FROM track AS T1 JOIN genre AS T2 ON T1.genre_id = T2.genre_id GROUP BY T2.genre_id, T2.genre ORDER BY COUNT(*) DESC LIMIT 1;",
+        "error": "UndefinedColumn: column t2.genre does not exist\nLINE 1: SELECT T2.genre FROM track AS T1 JOIN genre AS T2 ON T1.genr...\n               ^"
+      }
+    ]
+  },
+  "1.7b-step200__full": {
+    "n": 20,
+    "accuracy_before": 0.6,
+    "accuracy_after_dialect_fix": 0.7,
+    "recovered": 2,
+    "repairs": [
+      {
+        "id": 2,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT COUNT(*) FROM customer WHERE country = 'Canada';",
+        "error": null
+      },
+      {
+        "id": 14,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT first_name, last_name FROM customer WHERE country = 'Brazil';",
+        "error": null
+      },
+      {
+        "id": 18,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT T1.total FROM invoice AS T1 JOIN customer AS T2 ON T1.customer_id = T2.customer_id WHERE T2.country = 'USA';",
+        "error": null
+      }
+    ]
+  },
+  "9b-ckpt200__embeddings": {
+    "n": 20,
+    "accuracy_before": 0.7,
+    "accuracy_after_dialect_fix": 0.8,
+    "recovered": 2,
+    "repairs": [
+      {
+        "id": 11,
+        "applied": [
+          "group-by"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT COUNT(*), T2.name FROM playlist_track AS T1 JOIN playlist AS T2 ON T1.playlist_id = T2.playlist_id GROUP BY T1.playlist_id, T2.name;",
+        "error": null
+      },
+      {
+        "id": 18,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT SUM(T2.total) FROM customer AS T1 JOIN invoice AS T2 ON T1.customer_id = T2.customer_id WHERE T1.country = 'USA';",
+        "error": null
+      },
+      {
+        "id": 19,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT T2.name FROM genre AS T1 JOIN track AS T2 ON T1.genre_id = T2.genre_id WHERE T1.name = 'Rock' LIMIT 10;",
+        "error": null
+      },
+      {
+        "id": 20,
+        "applied": [
+          "group-by"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT COUNT(*), T2.last_name FROM customer AS T1 JOIN employee AS T2 ON T1.support_rep_id = T2.employee_id GROUP BY T1.support_rep_id, T2.last_name;",
+        "error": null
+      }
+    ]
+  },
+  "9b-ckpt200__full": {
+    "n": 20,
+    "accuracy_before": 0.7,
+    "accuracy_after_dialect_fix": 0.8,
+    "recovered": 2,
+    "repairs": [
+      {
+        "id": 18,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT SUM(T2.total) FROM customer AS T1 JOIN invoice AS T2 ON T1.customer_id = T2.customer_id WHERE T1.country = 'USA';",
+        "error": null
+      },
+      {
+        "id": 19,
+        "applied": [
+          "quoted-literal"
+        ],
+        "now_correct": true,
+        "repaired_sql": "SELECT T2.name FROM genre AS T1 JOIN track AS T2 ON T1.genre_id = T2.genre_id WHERE T1.name = 'Rock' LIMIT 10;",
+        "error": null
+      },
+      {
+        "id": 20,
+        "applied": [
+          "group-by"
+        ],
+        "now_correct": false,
+        "repaired_sql": "SELECT COUNT(*), T2.last_name FROM customer AS T1 JOIN employee AS T2 ON T1.support_rep_id = T2.employee_id GROUP BY T1.support_rep_id, T2.last_name;",
+        "error": null
+      }
+    ]
+  }
+}

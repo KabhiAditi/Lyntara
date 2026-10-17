@@ -24,6 +24,7 @@ import re
 import sys
 import time
 from datetime import datetime
+from functools import lru_cache
 from decimal import Decimal
 from pathlib import Path
 
@@ -83,15 +84,29 @@ def rows_match(gold_rows, pred_rows, gold_sql: str) -> bool:
     return sorted(g, key=repr) == sorted(p, key=repr)
 
 
+@lru_cache(maxsize=4)
+def _context(db: str) -> str:
+    return (REPO / "View_Selection" / f"{db}_context.json").read_text()
+
+
+@lru_cache(maxsize=2)
+def _retriever(db: str):
+    """Built once. The embedding model is ~1.6 GB; reloading it per question
+    made a 20-question run take longer than the generation itself."""
+    from Engine.sql import SchemaRetriever
+
+    return SchemaRetriever(
+        collection_name=f"{db}-table",
+        context_file=str(REPO / "View_Selection" / f"{db}_context.json"),
+        model_name=os.getenv("EMBEDDING_MODEL_NAME", "Alibaba-NLP/gte-large-en-v1.5"),
+    )
+
+
 def load_schema(db: str, mode: str, question: str, top_k: int) -> dict:
-    ctx_path = REPO / "View_Selection" / f"{db}_context.json"
-    full = json.loads(ctx_path.read_text())
+    full = json.loads(_context(db))
     if mode == "full":
         return full
-    from Engine.sql import SchemaRetriever
-    r = SchemaRetriever(collection_name=f"{db}-table",
-                        context_file=str(ctx_path),
-                        model_name=os.getenv("EMBEDDING_MODEL_NAME", "Alibaba-NLP/gte-large-en-v1.5"))
+    r = _retriever(db)
     hits = r.search_schema(question, top_k=top_k, collection_name=f"{db}-table")
     tables = [h["payload"]["table"] for h in (hits.get("result") or []) if h.get("payload", {}).get("table")]
     picked = {t: full[t] for t in tables if t in full}

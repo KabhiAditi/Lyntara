@@ -1,0 +1,414 @@
+{
+  "summary": {
+    "model": "lyntara-sql-1.7b:step1150",
+    "mode": "embeddings",
+    "database": "chinook",
+    "timestamp": "2026-10-17T19:19:26",
+    "n": 20,
+    "correct": 13,
+    "execution_accuracy": 0.65,
+    "by_difficulty": {
+      "easy": {
+        "correct": 5,
+        "n": 7,
+        "accuracy": 0.7143
+      },
+      "hard": {
+        "correct": 3,
+        "n": 6,
+        "accuracy": 0.5
+      },
+      "medium": {
+        "correct": 5,
+        "n": 7,
+        "accuracy": 0.7143
+      }
+    },
+    "mean_latency_s": 7.72,
+    "total_latency_s": 154.4,
+    "no_sql_extracted": 0,
+    "sql_errors": 3
+  },
+  "records": [
+    {
+      "id": 1,
+      "difficulty": "easy",
+      "question": "How many albums are there?",
+      "gold_sql": "SELECT count(*) FROM album;",
+      "pred_sql": "SELECT count(*) FROM album;",
+      "exec_match": true,
+      "latency_s": 27.77,
+      "tables_in_prompt": [
+        "album",
+        "genre",
+        "media_type",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 141
+    },
+    {
+      "id": 2,
+      "difficulty": "easy",
+      "question": "How many customers are from Canada?",
+      "gold_sql": "SELECT count(*) FROM customer WHERE country = 'Canada';",
+      "pred_sql": "SELECT count(*) FROM customer WHERE country = \"Canada\";",
+      "exec_match": false,
+      "latency_s": 4.0,
+      "tables_in_prompt": [
+        "artist",
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line"
+      ],
+      "pred_error": "UndefinedColumn: column \"Canada\" does not exist\nLINE 1: SELECT count(*) FROM customer WHERE country = \"Canada\";\n                                                      ^",
+      "provider_error": null,
+      "raw_chars": 264
+    },
+    {
+      "id": 3,
+      "difficulty": "easy",
+      "question": "List the names of all genres.",
+      "gold_sql": "SELECT name FROM genre;",
+      "pred_sql": "SELECT name FROM genre;",
+      "exec_match": true,
+      "latency_s": 3.4,
+      "tables_in_prompt": [
+        "album",
+        "genre",
+        "media_type",
+        "playlist",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 213
+    },
+    {
+      "id": 4,
+      "difficulty": "easy",
+      "question": "What is the duration of the longest track in milliseconds?",
+      "gold_sql": "SELECT max(milliseconds) FROM track;",
+      "pred_sql": "SELECT milliseconds FROM track ORDER BY milliseconds DESC LIMIT 1;",
+      "exec_match": true,
+      "latency_s": 5.29,
+      "tables_in_prompt": [
+        "invoice_line",
+        "media_type",
+        "playlist",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 354
+    },
+    {
+      "id": 5,
+      "difficulty": "easy",
+      "question": "How many employees work for the company?",
+      "gold_sql": "SELECT count(*) FROM employee;",
+      "pred_sql": "SELECT count(*) ,  company FROM employee GROUP BY company;",
+      "exec_match": false,
+      "latency_s": 5.79,
+      "tables_in_prompt": [
+        "artist",
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line"
+      ],
+      "pred_error": "UndefinedColumn: column \"company\" does not exist\nLINE 1: SELECT count(*) ,  company FROM employee GROUP BY company;\n                           ^",
+      "provider_error": null,
+      "raw_chars": 323
+    },
+    {
+      "id": 6,
+      "difficulty": "easy",
+      "question": "What is the average invoice total?",
+      "gold_sql": "SELECT avg(total) FROM invoice;",
+      "pred_sql": "SELECT AVG(total) FROM invoice;",
+      "exec_match": true,
+      "latency_s": 3.63,
+      "tables_in_prompt": [
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 153
+    },
+    {
+      "id": 7,
+      "difficulty": "easy",
+      "question": "List the titles of all albums by artist id 1.",
+      "gold_sql": "SELECT title FROM album WHERE artist_id = 1;",
+      "pred_sql": "SELECT T1.title FROM album AS T1 JOIN artist AS T2 ON T1.artist_id = T2.artist_id WHERE T2.artist_id = 1;",
+      "exec_match": true,
+      "latency_s": 6.45,
+      "tables_in_prompt": [
+        "album",
+        "artist",
+        "genre",
+        "playlist",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 369
+    },
+    {
+      "id": 8,
+      "difficulty": "medium",
+      "question": "How many tracks are there in each genre?",
+      "gold_sql": "SELECT g.name, count(*) FROM genre g JOIN track t ON g.genre_id = t.genre_id GROUP BY g.genre_id, g.name;",
+      "pred_sql": "SELECT genre_id , count(*) FROM genre GROUP BY genre_id;",
+      "exec_match": false,
+      "latency_s": 4.71,
+      "tables_in_prompt": [
+        "album",
+        "genre",
+        "media_type",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 282
+    },
+    {
+      "id": 9,
+      "difficulty": "medium",
+      "question": "List the names of the top 5 artists with the most albums.",
+      "gold_sql": "SELECT ar.name FROM artist ar JOIN album al ON ar.artist_id = al.artist_id GROUP BY ar.artist_id, ar.name ORDER BY count(*) DESC LIMIT 5;",
+      "pred_sql": "SELECT T1.name FROM artist AS T1 JOIN album AS T2 ON T1.artist_id = T2.artist_id GROUP BY T1.name ORDER BY count(*) DESC LIMIT 5;",
+      "exec_match": true,
+      "latency_s": 10.05,
+      "tables_in_prompt": [
+        "album",
+        "artist",
+        "genre",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 538
+    },
+    {
+      "id": 10,
+      "difficulty": "medium",
+      "question": "What is the total amount invoiced for each billing country?",
+      "gold_sql": "SELECT billing_country, sum(total) FROM invoice GROUP BY billing_country;",
+      "pred_sql": "SELECT billing_country ,  SUM(total) FROM invoice GROUP BY billing_country;",
+      "exec_match": true,
+      "latency_s": 5.67,
+      "tables_in_prompt": [
+        "customer",
+        "genre",
+        "invoice",
+        "invoice_line",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 373
+    },
+    {
+      "id": 11,
+      "difficulty": "medium",
+      "question": "How many tracks does each playlist contain?",
+      "gold_sql": "SELECT p.name, count(*) FROM playlist p JOIN playlist_track pt ON p.playlist_id = pt.playlist_id GROUP BY p.playlist_id, p.name;",
+      "pred_sql": "SELECT T1.playlist_id ,  COUNT(*) FROM playlist_track AS T1 JOIN playlist AS T2 ON T1.playlist_id = T2.playlist_id GROUP BY T1.playlist_id;",
+      "exec_match": false,
+      "latency_s": 6.0,
+      "tables_in_prompt": [
+        "genre",
+        "media_type",
+        "playlist",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 367
+    },
+    {
+      "id": 12,
+      "difficulty": "medium",
+      "question": "Show the title of each album together with the name of its artist, limited to 10 rows.",
+      "gold_sql": "SELECT al.title, ar.name FROM album al JOIN artist ar ON al.artist_id = ar.artist_id LIMIT 10;",
+      "pred_sql": "SELECT T1.title ,  T2.name FROM album AS T1 JOIN artist AS T2 ON T1.artist_id = T2.artist_id LIMIT 10;",
+      "exec_match": true,
+      "latency_s": 7.36,
+      "tables_in_prompt": [
+        "album",
+        "artist",
+        "genre",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 395
+    },
+    {
+      "id": 13,
+      "difficulty": "medium",
+      "question": "Which billing countries have more than 20 invoices?",
+      "gold_sql": "SELECT billing_country FROM invoice GROUP BY billing_country HAVING count(*) > 20;",
+      "pred_sql": "SELECT billing_country FROM invoice GROUP BY billing_country HAVING count(*) > 20;",
+      "exec_match": true,
+      "latency_s": 6.9,
+      "tables_in_prompt": [
+        "customer",
+        "genre",
+        "invoice",
+        "invoice_line",
+        "playlist_track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 431
+    },
+    {
+      "id": 14,
+      "difficulty": "medium",
+      "question": "What are the first and last names of customers who live in Brazil?",
+      "gold_sql": "SELECT first_name, last_name FROM customer WHERE country = 'Brazil';",
+      "pred_sql": "SELECT first_name ,  last_name FROM customer WHERE country  =  'Brazil';",
+      "exec_match": true,
+      "latency_s": 5.58,
+      "tables_in_prompt": [
+        "artist",
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 350
+    },
+    {
+      "id": 15,
+      "difficulty": "hard",
+      "question": "Which genre has the most tracks?",
+      "gold_sql": "SELECT g.name FROM genre g JOIN track t ON g.genre_id = t.genre_id GROUP BY g.genre_id, g.name ORDER BY count(*) DESC LIMIT 1;",
+      "pred_sql": "SELECT T1.name FROM genre AS T1 JOIN track AS T2 ON T1.genre_id = T2.genre_id GROUP BY T1.genre_id ORDER BY count(*) DESC LIMIT 1;",
+      "exec_match": true,
+      "latency_s": 9.54,
+      "tables_in_prompt": [
+        "album",
+        "genre",
+        "media_type",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 541
+    },
+    {
+      "id": 16,
+      "difficulty": "hard",
+      "question": "List the full names of the top 3 customers by total amount spent.",
+      "gold_sql": "SELECT c.first_name, c.last_name FROM customer c JOIN invoice i ON c.customer_id = i.customer_id GROUP BY c.customer_id, c.first_name, c.last_name ORDER BY sum(i.total) DESC LIMIT 3;",
+      "pred_sql": "SELECT t1.first_name ,  t1.last_name FROM customer AS t1 JOIN invoice AS t2 ON t1.customer_id = t2.customer_id ORDER BY total DESC LIMIT 3;",
+      "exec_match": false,
+      "latency_s": 7.47,
+      "tables_in_prompt": [
+        "artist",
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 416
+    },
+    {
+      "id": 17,
+      "difficulty": "hard",
+      "question": "Which album contains the most tracks? Give the album title.",
+      "gold_sql": "SELECT al.title FROM album al JOIN track t ON al.album_id = t.album_id GROUP BY al.album_id, al.title ORDER BY count(*) DESC LIMIT 1;",
+      "pred_sql": "SELECT T1.title FROM album AS T1 JOIN track AS T2 ON T1.album_id = T2.album_id GROUP BY T1.title ORDER BY count(*) DESC LIMIT 1;",
+      "exec_match": true,
+      "latency_s": 9.51,
+      "tables_in_prompt": [
+        "album",
+        "genre",
+        "invoice_line",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 537
+    },
+    {
+      "id": 18,
+      "difficulty": "hard",
+      "question": "What is the total revenue generated from customers in the USA?",
+      "gold_sql": "SELECT sum(i.total) FROM invoice i JOIN customer c ON i.customer_id = c.customer_id WHERE c.country = 'USA';",
+      "pred_sql": "SELECT sum(T1.total) FROM invoice AS T1 JOIN customer AS T2 ON T1.customer_id  =  T2.customer_id WHERE T2.country  =  'USA';",
+      "exec_match": true,
+      "latency_s": 8.13,
+      "tables_in_prompt": [
+        "artist",
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 482
+    },
+    {
+      "id": 19,
+      "difficulty": "hard",
+      "question": "Find the names of tracks that belong to the Rock genre, limited to 10.",
+      "gold_sql": "SELECT t.name FROM track t JOIN genre g ON t.genre_id = g.genre_id WHERE g.name = 'Rock' LIMIT 10;",
+      "pred_sql": "SELECT T2.name FROM genre AS T1 JOIN track AS T2 ON T1.genre_id = T2.genre_id WHERE T2.genre_id = (SELECT genre_id FROM genre WHERE name = \"Rock\") LIMIT 10;",
+      "exec_match": false,
+      "latency_s": 9.41,
+      "tables_in_prompt": [
+        "album",
+        "genre",
+        "media_type",
+        "playlist_track",
+        "track"
+      ],
+      "pred_error": "UndefinedColumn: column \"Rock\" does not exist\nLINE 1: ...nre_id = (SELECT genre_id FROM genre WHERE name = \"Rock\") LI...\n                                                             ^",
+      "provider_error": null,
+      "raw_chars": 538
+    },
+    {
+      "id": 20,
+      "difficulty": "hard",
+      "question": "How many customers does each support representative handle? Show the representative's last name.",
+      "gold_sql": "SELECT e.last_name, count(*) FROM employee e JOIN customer c ON e.employee_id = c.support_rep_id GROUP BY e.employee_id, e.last_name;",
+      "pred_sql": "SELECT T2.last_name FROM customer AS T1 JOIN employee AS T2 ON T1.support_rep_id = T2.employee_id GROUP BY T2.last_name ORDER BY count(*) DESC LIMIT 1;",
+      "exec_match": false,
+      "latency_s": 7.72,
+      "tables_in_prompt": [
+        "artist",
+        "customer",
+        "employee",
+        "invoice",
+        "invoice_line"
+      ],
+      "pred_error": null,
+      "provider_error": null,
+      "raw_chars": 491
+    }
+  ]
+}

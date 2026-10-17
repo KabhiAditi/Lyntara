@@ -456,7 +456,7 @@ window.executeSQL = async function() {
     if (!out.ok) {
        d.thead = ["error"];
        if (out.fixed_sql) {
-         d.tbody = [[out.error + " | Gemini attempted a fix! Review the new query above and click Execute again."]];
+         d.tbody = [[out.error + " | The model attempted a fix! Review the new query above and click Execute again."]];
          d.sql = renderSQL(out.fixed_sql);
          d.raw_sql = out.fixed_sql;
        } else {

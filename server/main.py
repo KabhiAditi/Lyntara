@@ -167,8 +167,8 @@ def create_app() -> FastAPI:
         if err:
             fixed_sql = None
             if req.nl_query and req.database:
-                from server.services.engine_service import fix_sql_with_gemini
-                fixed_sql = fix_sql_with_gemini(req.database, req.nl_query, req.sql, err)
+                from server.services.engine_service import fix_sql_with_llm
+                fixed_sql = fix_sql_with_llm(req.database, req.nl_query, req.sql, err)
             return ExecuteResponse(ok=False, error=err, columns=[], rows=[], fixed_sql=fixed_sql)
         return ExecuteResponse(ok=True, columns=cols, rows=rows)
 

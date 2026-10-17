@@ -23,7 +23,16 @@ class Settings:
     embedding_model_name: str
 
     # LLM model names (used by Engine/*)
+    # Context/JSON enrichment still runs on Gemini; SQL generation is local.
     gemini_model_name: str
+
+    # Local LLM (SQL generation) -- see Engine/llm/factory.py for the full
+    # LLM_<ROLE>_* environment contract.
+    llm_sql_provider: str
+    llm_sql_base_url: str
+    llm_sql_model: str
+    llm_sql_timeout: float
+    llm_sql_retries: int
 
     # PostgreSQL connectivity check only
     pg_host: str
@@ -57,7 +66,12 @@ def get_settings() -> Settings:
         qdrant_port=int(os.getenv("QDRANT_PORT", "6333")),
         qdrant_collection=os.getenv("QDRANT_COLLECTION", "table"),
         embedding_model_name=os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2"),
-        gemini_model_name=os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash"),
+        gemini_model_name=os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash"),
+        llm_sql_provider=os.getenv("LLM_SQL_PROVIDER", "ollama"),
+        llm_sql_base_url=os.getenv("LLM_SQL_BASE_URL", "http://localhost:11434"),
+        llm_sql_model=os.getenv("LLM_SQL_MODEL", "lyntara-sql:ckpt200"),
+        llm_sql_timeout=float(os.getenv("LLM_SQL_TIMEOUT", "120")),
+        llm_sql_retries=int(os.getenv("LLM_SQL_RETRIES", "1")),
         pg_host=os.getenv("PGHOST", "localhost"),
         pg_port=int(os.getenv("PGPORT", "5432")),
         pg_database=os.getenv("PGDATABASE", ""),

@@ -8,8 +8,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 import re
 import json
 import sqlglot
-from typing import Dict, Any, Set
-from google import genai
+from typing import Dict, Any, Optional, Set
 
 import json
 from typing import Any, Dict, Optional
@@ -17,15 +16,42 @@ from typing import Any, Dict, Optional
 from sentence_transformers import SentenceTransformer
 import httpx
 
+# Engine/ is imported both as a package (from the server) and as a bare script
+# directory (Engine/main.py does `from sql import NL2SQL`). Put the repo root on
+# the path so `Engine.llm` resolves either way.
+import sys as _sys
+from pathlib import Path as _Path
+_repo_root = str(_Path(__file__).resolve().parents[1])
+if _repo_root not in _sys.path:
+    _sys.path.insert(0, _repo_root)
+
+from Engine.llm import STYLE_CHATML, LLMError, LLMProvider, get_provider, get_retries
+from Engine.llm import prompts as sql_prompts
+
 
 class NL2SQL:
-    def __init__(self, model_name: str = "gemini-3.5-flash"):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is not set.")
+    """Natural-language -> SQL, backed by a pluggable LLM provider.
 
-        self.client = genai.Client(api_key=api_key)
+    The provider is resolved from environment config (see Engine.llm.factory),
+    so switching between the local fine-tune, a different local model, or a
+    hosted API is a .env change rather than a code change.
+    """
+
+    def __init__(
+        self,
+        model_name: Optional[str] = None,
+        provider: Optional["LLMProvider"] = None,
+        role: str = "sql",
+    ):
+        self.role = role
+        self._provider = provider
         self.model_name = model_name
+
+    @property
+    def provider(self) -> "LLMProvider":
+        if self._provider is None:
+            self._provider = get_provider(self.role)
+        return self._provider
 
     def _schema_to_text(self, schema: Dict[str, Any]) -> str:
         parts = []
@@ -122,51 +148,140 @@ SQL:
             for table, info in schema.items()
         }
 
+    def _alias_map(self, parsed: "sqlglot.exp.Expression") -> Dict[str, str]:
+        """Map table aliases to their real table names.
+
+        The Spider fine-tune emits `FROM artist AS T1 JOIN album AS T2`, so
+        without this every qualified column looks like it belongs to an unknown
+        table `T1` and validation rejects perfectly good SQL.
+        """
+        aliases: Dict[str, str] = {}
+        for table in parsed.find_all(sqlglot.exp.Table):
+            if not table.name:
+                continue
+            real = table.name.lower()
+            alias = table.alias_or_name
+            if alias:
+                aliases[alias.lower()] = real
+            aliases.setdefault(real, real)
+        return aliases
+
     def _validate(self, sql: str, schema: Dict[str, Any]) -> bool:
         try:
             parsed = sqlglot.parse_one(sql, read="postgres")
         except Exception:
             return False
 
+        if parsed is None:
+            return False
+
         allowed = self._allowed_schema(schema)
+        aliases = self._alias_map(parsed)
+
+        # Columns introduced by the query itself (SELECT ... AS x, CTE names)
+        # are legitimate references that won't appear in the schema.
+        derived = {
+            a.alias.lower()
+            for a in parsed.find_all(sqlglot.exp.Alias)
+            if a.alias
+        }
+        cte_names = {
+            cte.alias_or_name.lower()
+            for cte in parsed.find_all(sqlglot.exp.CTE)
+            if cte.alias_or_name
+        }
 
         for table in parsed.find_all(sqlglot.exp.Table):
-            if table.name and table.name.lower() not in allowed:
+            name = table.name.lower() if table.name else ""
+            if name and name not in allowed and name not in cte_names:
                 return False
 
         for col in parsed.find_all(sqlglot.exp.Column):
             col_name = col.name.lower()
-            table_name = col.table.lower() if col.table else None
+            qualifier = col.table.lower() if col.table else None
 
-            if table_name:
-                if table_name not in allowed:
+            if qualifier:
+                real_table = aliases.get(qualifier, qualifier)
+                if real_table in cte_names or qualifier in cte_names:
+                    continue
+                if real_table not in allowed:
                     return False
-                if col_name not in allowed[table_name]:
+                if col_name not in allowed[real_table]:
                     return False
             else:
+                if col_name in derived or col_name in cte_names:
+                    continue
                 if not any(col_name in cols for cols in allowed.values()):
                     return False
 
         return True
 
-    def _call_gemini(self, prompt: str) -> str:
-        response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-        )
-        return (response.text or "").strip()
+    def _call_llm(self, prompt: str, **params: Any) -> str:
+        """Send a prompt through the configured provider.
 
-    def generate(self, query: str, schema: Dict[str, Any], retries: int = 2) -> str:
-        prompt = self._build_prompt(query, schema)
+        Providers declaring the ChatML style receive the prompt verbatim (no
+        server-side templating), which is what the Spider fine-tune requires.
+        """
+        if self.model_name:
+            params.setdefault("model", self.model_name)
+        return self.provider.complete(prompt, **params)
+
+    # Backwards-compatible alias for callers that predate the provider layer.
+    _call_gemini = _call_llm
+
+    def _uses_finetune_format(self) -> bool:
+        return getattr(self.provider, "prompt_style", None) == STYLE_CHATML
+
+    def generate(
+        self,
+        query: str,
+        schema: Dict[str, Any],
+        retries: Optional[int] = None,
+        db_id: str = "database",
+    ) -> str:
+        """Generate SQL for ``query`` against ``schema``.
+
+        Prompt format follows the provider: the Spider-tuned local model gets
+        the ChatML rendering it was trained on, hosted instruction models get
+        the original flat prompt. Output is validated against the schema before
+        being accepted.
+        """
+        finetuned = self._uses_finetune_format()
+
+        if finetuned:
+            prompt = sql_prompts.build_chatml_prompt(query, schema, db_id=db_id)
+            extract = sql_prompts.extract_sql
+        else:
+            prompt = self._build_prompt(query, schema)
+            extract = self._extract_sql
+
+        # Local 9B models take ~20-30s per call on Apple Silicon, so the default
+        # attempt count comes from config rather than being hard-coded at 2.
+        attempts = retries if retries is not None else get_retries(self.role)
         last_sql = "-- Failed to generate valid SQL"
+        last_error: Optional[Exception] = None
 
-        for _ in range(retries):
-            output_text = self._call_gemini(prompt)
-            sql = self._extract_sql(output_text)
+        for attempt in range(max(1, attempts)):
+            try:
+                # A deterministic first pass; nudge sampling on retry so a
+                # repeat attempt can actually produce something different.
+                params: Dict[str, Any] = {"temperature": 0.4} if attempt else {}
+                output_text = self._call_llm(prompt, **params)
+            except LLMError as exc:
+                last_error = exc
+                print(f"[NL2SQL] provider error on attempt {attempt + 1}: {exc}")
+                continue
+
+            sql = extract(output_text)
+            if not sql:
+                continue
             last_sql = sql
 
             if sql.strip().lower().startswith("select") and self._validate(sql, schema):
                 return sql
+
+        if last_error is not None and last_sql == "-- Failed to generate valid SQL":
+            raise last_error
 
         return last_sql
 

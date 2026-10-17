@@ -526,6 +526,15 @@ def run_full_pipeline(
         yield {"step": "error", "progress": 0, "message": f"Context generation failed: {e}"}
         return
 
+    if os.getenv("SCHEMA_MODE", "full").strip().lower() == "full":
+        # Without-embeddings branch: SQL generation reads the whole schema from
+        # the context JSON, so building vectors would cost minutes of embedding
+        # for data nothing ever queries.
+        yield {"step": "upserting_embeddings", "progress": 95,
+               "message": "Skipped embeddings (SCHEMA_MODE=full)."}
+        yield {"step": "done", "progress": 100, "message": "Pipeline complete (no vector index)."}
+        return
+
     yield {"step": "upserting_embeddings", "progress": 80, "message": "Encoding & upserting to Qdrant..."}
 
     try:

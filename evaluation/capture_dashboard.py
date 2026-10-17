@@ -25,7 +25,7 @@ DB = dict(host="localhost", port="5433", name="chinook", user="postgres", passwo
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--label", required=True, help="subfolder name for this configuration")
-    ap.add_argument("--question", default="List the names of the top 5 artists with the most albums.")
+    ap.add_argument("--question", default="Show the title of each album together with the name of its artist, limited to 10 rows.")
     ap.add_argument("--url", default="http://localhost:5173")
     ap.add_argument("--out-dir", default=str(REPO / "evaluation" / "screenshots"))
     ap.add_argument("--gen-timeout", type=int, default=300_000, help="ms to wait for SQL generation")
@@ -46,6 +46,8 @@ def main() -> int:
         browser = pw.chromium.launch(headless=not args.headed)
         page = browser.new_page(viewport={"width": 1600, "height": 1000}, device_scale_factor=2)
         page.set_default_timeout(60_000)
+        page.on("pageerror", lambda e: print(f"  !! page error: {str(e)[:200]}"))
+        page.on("requestfailed", lambda r: print(f"  !! request failed: {r.url}"))
 
         print(f"-> {args.url}")
         page.goto(args.url, wait_until="networkidle")
@@ -75,50 +77,71 @@ def main() -> int:
         page.wait_for_timeout(1500)
         shot(5, "workspace-ready", page)
 
-        # Schema explorer
-        page.click("text=Schema explorer")
-        page.wait_for_timeout(1500)
-        shot(6, "schema-explorer", page)
-        page.click("text=Query workspace")
-        page.wait_for_timeout(600)
-
         # Ask the question
         page.fill("#nl-input", args.question)
-        shot(7, "question-entered", page)
+        shot(6, "question-entered", page)
 
         page.click(".run-btn")
-        # Generation on a local model is slow; wait for the SQL panel to change
+        # Generation on a local model is slow. The panel passes through a
+        # "-- Generating SQL for: ..." placeholder, so waiting merely for the
+        # text to change captures that intermediate state instead of the answer.
+        # Wait for real SQL: a SELECT/WITH that is no longer the placeholder.
         page.wait_for_function(
             """() => {
                  const el = document.getElementById('sql-display');
                  if (!el) return false;
-                 const t = el.textContent || '';
-                 return t.length > 0 && !t.includes('total_revenue');
+                 const t = (el.textContent || '').trim();
+                 if (!t || t.includes('Generating SQL') || t.includes('total_revenue')) return false;
+                 const u = t.toUpperCase();
+                 return u.indexOf('SELECT') >= 0 || u.indexOf('WITH ') >= 0;
                }""",
             timeout=args.gen_timeout,
         )
-        page.wait_for_timeout(1200)
-        shot(8, "sql-generated", page)
+        page.wait_for_timeout(1500)
+        shot(7, "sql-generated", page)
 
         # Matched tables panel -- the visible difference between the two modes
         try:
             page.locator("#tables-matched").scroll_into_view_if_needed()
             page.wait_for_timeout(400)
-            shot(9, "tables-matched", page)
+            shot(8, "tables-matched", page)
         except Exception as exc:  # noqa: BLE001
             print(f"  (tables-matched skipped: {type(exc).__name__})")
 
-        # Execute against PostgreSQL
+        # Execute against PostgreSQL, then wait for real rows rather than the
+        # "SQL is being generated." holding message.
         page.click("button.copy-btn:has-text('Execute')")
-        page.wait_for_timeout(8000)
+        try:
+            page.wait_for_function(
+                """() => {
+                     const b = document.getElementById('res-body');
+                     if (!b) return false;
+                     const t = (b.textContent || '').toLowerCase();
+                     return t.trim().length > 0
+                            && !t.includes('being generated')
+                            && !t.includes('executing')
+                            && !t.includes('sql is ready');
+                   }""",
+                timeout=120_000,
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"  (results wait timed out: {type(exc).__name__})")
+        page.wait_for_timeout(2500)
         try:
             page.locator("#res-body").scroll_into_view_if_needed()
         except Exception:  # noqa: BLE001
             pass
         page.wait_for_timeout(600)
-        shot(10, "query-results", page)
+        shot(9, "query-results", page)
+
+        # Schema explorer -- visited last so it cannot disturb the query flow
+        page.click("text=Schema explorer")
+        page.wait_for_timeout(1800)
+        shot(10, "schema-explorer", page)
 
         # Whole page, for the record
+        page.click("text=Query workspace")
+        page.wait_for_timeout(800)
         page.screenshot(path=str(out / "11-full-page.png"), full_page=True)
         shots.append("11-full-page.png")
         print("  [11] full-page")

@@ -67,6 +67,8 @@ def get_settings() -> Settings:
         repo_root=repo_root,
         context_json_path=context_json_path,
         cors_allow_origins=cors_allow_origins,
+        # This branch: dense retrieval. See experiment/without-embeddings for the
+        # full-schema variant.
         schema_mode=os.getenv("SCHEMA_MODE", "embeddings").strip().lower(),
         schema_top_k=int(os.getenv("SCHEMA_TOP_K", "5")),
         qdrant_host=os.getenv("QDRANT_HOST", "localhost"),
